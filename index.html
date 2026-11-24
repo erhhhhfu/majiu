@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>馬廄清單</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#181b22; --panel2:#20242d; --line:#2c313c;
+    --text:#eef0f4; --mute:#8b93a3; --accent:#ffcc33; --accent-ink:#1a1400;
+    --red:#ff5d5d; --green:#3ddc84; --blue:#5aa9ff; --orange:#ff9f43;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Noto Sans TC",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit;color:inherit}
+  .wrap{max-width:760px;margin:0 auto;padding:0 14px 150px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 0 12px}
+  h1{font-size:22px;font-weight:900;margin:0;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .live{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+  .dot.on{background:var(--green);animation:pulse 2s infinite}
+  .dot.err{background:var(--red)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+
+  /* 我是誰 bar */
+  .mebar{position:sticky;top:0;z-index:20;background:rgba(15,17,21,.94);backdrop-filter:blur(8px);
+    margin:0 -14px 12px;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .mebtn{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 12px;text-align:left;cursor:pointer}
+  .mebtn small{display:block;font-size:11px;color:var(--mute)}
+  .mebtn b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mebtn.unset{border-color:var(--accent);background:#241f0d}
+  .mebtn.unset b{color:var(--accent)}
+
+  .sale{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;cursor:pointer}
+  .sale-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .sale-top .lbl{font-size:12px;color:var(--mute)}
+  .sale-top .nx{font-size:15px;font-weight:700}
+  .cd{font-size:20px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+  .cd.now{color:var(--red)}
+  .sched{display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .sale.open .sched{display:block}
+  .si{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;color:var(--mute)}
+  .si.next{color:var(--text);font-weight:700}
+  .si.past{text-decoration:line-through;opacity:.5}
+  .si span:last-child{text-align:right}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 6px;text-align:center;cursor:pointer}
+  .stat.sel{border-color:var(--accent);background:#241f0d}
+  .stat b{display:block;font-size:22px;font-weight:900;line-height:1.2}
+  .stat small{font-size:12px;color:var(--mute)}
+  .stat.s-none b{color:var(--orange)} .stat.s-ordered b{color:var(--blue)} .stat.s-done b{color:var(--green)}
+
+  .tools{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .search{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+  .search:focus{border-color:var(--accent)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+  .chip.sel{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .chip.mine.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+  .btn{border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--panel2);border:1px solid var(--line)}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.danger{background:transparent;color:var(--red);border-color:#4a2a2a}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .group{margin-bottom:18px}
+  .ghead{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px}
+  .ghead h2{font-size:14px;margin:0;color:var(--mute);font-weight:700;letter-spacing:1px}
+  .ghead h2 em{font-style:normal;color:var(--text);margin-left:6px}
+  .list{display:flex;flex-direction:column;gap:8px}
+
+  .row{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--orange);border-radius:12px;padding:10px 10px 10px 12px}
+  .row.ordered{border-left-color:var(--blue)}
+  .row.done{border-left-color:var(--green)}
+  .row.mine{background:#1d1c17}
+  .top{display:flex;align-items:flex-start;gap:8px}
+  .who{flex:1;min-width:0}
+  .nm{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .nm strong{font-size:18px;font-weight:700;letter-spacing:.5px;user-select:all}
+  .copy{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--mute)}
+  .copy.done{color:var(--green);border-color:var(--green)}
+  .meta{font-size:13px;color:var(--mute);margin-top:3px;line-height:1.6}
+  .meta b{color:var(--text);font-weight:500}
+  .note{display:inline-block;font-size:12px;background:#262a33;border-radius:6px;padding:0 7px;color:#c5cad4}
+  .tk{display:inline-block;font-size:12px;border:1px solid #4a4220;color:var(--accent);border-radius:6px;padding:0 6px}
+  .catset{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 8px;font-size:12px;cursor:pointer;margin-right:4px}
+  .catset:active{background:var(--accent);color:var(--accent-ink)}
+  .edit{background:transparent;border:0;color:var(--mute);font-size:13px;cursor:pointer;padding:4px 6px}
+
+  /* 三段狀態按鈕 */
+  .stbar{display:grid;grid-template-columns:1fr 1.3fr 1.3fr auto;gap:6px;margin-top:9px}
+  .sb{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 2px;font-size:14px;white-space:nowrap;font-weight:700;cursor:pointer;color:var(--mute);transition:background .1s}
+  .sb:active{transform:scale(.97)}
+  .sb.on.s-none{background:#3a2a14;color:var(--orange);border-color:#6b4a1f}
+  .sb.on.s-ordered{background:#14263a;color:var(--blue);border-color:#24507c}
+  .sb.on.s-done{background:#123222;color:var(--green);border-color:#1f6b42}
+  .sb.arm{background:var(--red);color:#fff;border-color:var(--red)}
+  .money{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:0 10px;font-size:13px;cursor:pointer;color:var(--mute);white-space:nowrap}
+  .money.on{color:var(--green);border-color:#1f6b42;background:#123222}
+  .money[hidden]{display:none}
+
+  .empty{text-align:center;color:var(--mute);padding:40px 10px;border:1px dashed var(--line);border-radius:var(--r)}
+  .banner{background:#2a1d10;border:1px solid #5a3b17;color:#ffcf99;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px;display:none}
+
+  .fab{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent,var(--bg) 35%);display:flex;justify-content:center;gap:8px;pointer-events:none;z-index:30}
+  .bigbuy{pointer-events:auto;width:100%;max-width:560px;border:0;border-radius:18px;padding:20px 16px;
+    font-size:22px;font-weight:900;letter-spacing:1px;cursor:pointer;color:#1a1400;
+    background:linear-gradient(135deg,#ffe066,#ffcc33 45%,#ff9f43);box-shadow:0 8px 28px rgba(255,180,50,.35),0 2px 0 #b8860b inset}
+  .bigbuy:active{transform:scale(.97)}
+  .addrow{display:block;width:100%;margin:4px 0 20px;background:transparent;border:1px dashed var(--line);border-radius:12px;
+    padding:12px;color:var(--mute);cursor:pointer;font-size:14px}
+  .addrow:hover{color:var(--text);border-color:#3a4150}
+  #fw{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200}
+
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .ov.show{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  @media(min-width:640px){.ov{align-items:center}.sheet{border-radius:18px}}
+  .sheet h3{margin:0 0 14px;font-size:18px}
+  .f{margin-bottom:12px}
+  .f label{display:block;font-size:13px;color:var(--mute);margin-bottom:5px}
+  .f input,.f select,.f textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+  .f textarea{min-height:110px;resize:vertical}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--accent)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left}
+  .seg button small{display:block;font-size:11px;opacity:.75;font-weight:400}
+  .seg button.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+  .pick{display:flex;flex-wrap:wrap;gap:6px;max-height:240px;overflow:auto;padding:2px}
+  .pick button{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;font-size:15px}
+  .pick button small{opacity:.7}
+  .pick button.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+  .pick .cat{width:100%;font-size:12px;color:var(--mute);margin-top:4px}
+  .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  .foot .grow{flex:1}
+  .chk{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
+  .chk input{width:20px;height:20px;accent-color:var(--green)}
+  .hint{font-size:12px;color:var(--mute);margin-top:4px}
+
+  .toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);
+    padding:9px 16px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;transition:.2s;z-index:100;pointer-events:none;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐴 馬廄<span>清單</span></h1>
+    <div class="live"><span class="dot" id="dot"></span><span id="liveTxt">連線中…</span></div>
+  </header>
+
+  <div class="mebar">
+    <button class="mebtn" id="meBtn"><small>我是</small><b id="meTxt">點這裡選你的名字</b></button>
+    <button class="mebtn" id="tkBtn"><small>我正在搶的票種</small><b id="tkTxt">選票種</b></button>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="sale" id="sale">
+    <div class="sale-top"><div><div class="lbl">下一場開賣 · 點開看全部時程</div><div class="nx" id="saleNext">–</div></div>
+      <div class="cd" id="saleCd">–</div></div>
+    <div class="sched" id="sched"></div>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat sel" data-f="all"><b id="nAll">–</b><small>全部</small></div>
+    <div class="stat s-none" data-f="none"><b id="nNone">–</b><small>還沒買</small></div>
+    <div class="stat s-ordered" data-f="ordered"><b id="nOrdered">–</b><small>已訂未結帳</small></div>
+    <div class="stat s-done" data-f="done"><b id="nDone">–</b><small>結帳完成</small></div>
+  </div>
+
+  <div class="tools">
+    <input class="search" id="q" placeholder="搜尋名字、誰買的、備註…">
+    <button class="btn sm" id="copyNone">複製還沒買的名字</button>
+  </div>
+  <div class="chips" id="chips"></div>
+
+  <div id="groups"></div>
+  <button class="addrow" id="openAdd">＋ 新增名字</button>
+</div>
+
+<div class="fab">
+  <button class="bigbuy" id="openBuy">🎉 我買到票了！</button>
+</div>
+<canvas id="fw"></canvas>
+
+<!-- 我是誰 -->
+<div class="ov" id="ovMe"><div class="sheet">
+  <h3>你是誰？</h3>
+  <div class="hint" style="margin:-8px 0 12px">選一次就好，這台裝置會記住。之後點「已訂購」就會自動填你的名字。</div>
+  <div class="pick" id="mePick"></div>
+  <div class="f" style="margin-top:12px"><label>不在名單上？直接輸入</label><input id="meInput" placeholder="例如：小黃表哥"></div>
+  <div class="foot"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="meSave">確定</button></div>
+</div></div>
+
+<!-- 票種 -->
+<div class="ov" id="ovTk"><div class="sheet">
+  <h3>你現在搶的是哪種票？</h3>
+  <div class="hint" style="margin:-8px 0 12px">點「已訂購」時會自動帶入這個票種和票價。</div>
+  <div class="seg" id="tkPick"></div>
+  <div class="foot"><button class="btn ghost" data-close>關閉</button></div>
+</div></div>
+
+<!-- 新增名字 -->
+<div class="ov" id="ovAdd"><div class="sheet">
+  <h3>新增名字</h3>
+  <div class="f"><label>名字（可一次貼多個，一行一個）</label>
+    <textarea id="addNames" placeholder="王小明&#10;陳小華"></textarea>
+    <div class="hint">要填實名的姓名，請跟證件一致</div></div>
+  <div class="f"><label>分類</label><div class="seg" id="addCatSeg"></div></div>
+  <div class="f"><label>備註（選填，例如：用 OOO 證件、給 XX 使用）</label><input id="addNote"></div>
+  <div class="foot"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="doAdd">新增</button></div>
+</div></div>
+
+<!-- 一次登記多人 -->
+<div class="ov" id="ovBuy"><div class="sheet">
+  <h3>🎉 我買到票了！</h3>
+  <div class="f"><label>這次幫誰訂到（只顯示還沒買的）</label><div class="pick" id="buyPick"></div></div>
+  <div class="f"><label>狀態</label><div class="seg" id="buySt">
+    <button data-s="ordered" class="sel">已訂購・未結帳</button><button data-s="done">結帳完成</button></div></div>
+  <div class="f"><label>票種</label><div class="seg" id="buyTk"></div></div>
+  <div class="two">
+    <div class="f"><label>誰買的</label><input id="buyBy" list="nameList"></div>
+    <div class="f"><label>每張票價</label><input id="buyPrice" type="number" inputmode="numeric"></div>
+  </div>
+  <div class="f"><label>錢要給誰</label><input id="buyPayTo" list="nameList" placeholder="預設＝買的人"></div>
+  <div class="foot"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="doBuy" style="flex:1;font-size:17px;padding:14px">確定！🎆</button></div>
+</div></div>
+
+<!-- 編輯 -->
+<div class="ov" id="ovEdit"><div class="sheet">
+  <h3>編輯 <span id="edTitle"></span></h3>
+  <div class="two">
+    <div class="f"><label>名字</label><input id="edName"></div>
+    <div class="f"><label>分類</label><select id="edCat"><option>優先go</option><option>等等go</option><option value="未分類">（未分類）</option></select></div>
+  </div>
+  <div class="f"><label>備註</label><input id="edNote"></div>
+  <div class="two">
+    <div class="f"><label>誰買的（空白＝還沒買）</label><input id="edBy" list="nameList"></div>
+    <div class="f"><label>票價</label><input id="edPrice" type="number" inputmode="numeric"></div>
+  </div>
+  <div class="two">
+    <div class="f"><label>票種</label><select id="edTk"></select></div>
+    <div class="f"><label>錢要給誰</label><input id="edPayTo" list="nameList"></div>
+  </div>
+  <div class="f"><label>狀態</label><select id="edSt">
+    <option value="ordered">已訂購・未結帳</option><option value="done">結帳完成</option></select></div>
+  <label class="chk"><input type="checkbox" id="edPaid"> 💰 錢已經付給對方了</label>
+  <div class="foot">
+    <button class="btn danger" id="edDel">刪除此人</button>
+    <button class="btn sm ghost" id="edClear">清除購買紀錄</button>
+    <span class="grow"></span>
+    <button class="btn ghost" data-close>取消</button><button class="btn primary" id="edSave">儲存</button>
+  </div>
+</div></div>
+
+<!-- 通關密語 -->
+<div class="ov" id="ovPass" style="align-items:center"><div class="sheet" style="border-radius:18px;max-width:360px;text-align:center">
+  <div style="font-size:44px">🐴</div>
+  <h3 style="margin:6px 0 4px">馬廄清單</h3>
+  <div class="hint" style="margin-bottom:14px">請輸入通關密語</div>
+  <div class="f"><input id="passIn" autocomplete="off" style="text-align:center;font-size:18px"></div>
+  <div class="hint" id="passErr" style="color:var(--red);min-height:18px"></div>
+  <button class="btn primary" id="passGo" style="width:100%;padding:14px;font-size:17px">進入</button>
+</div></div>
+
+<datalist id="nameList"></datalist>
+<datalist id="catList"></datalist>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ⬇⬇ Firebase 設定（從 Firebase 專案設定複製）
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBYqRthjxcqSPCIM1XTEwmgWZ7NuwXJUT4",
+  authDomain: "majiu-list.firebaseapp.com",
+  projectId: "majiu-list",
+  storageBucket: "majiu-list.firebasestorage.app",
+  messagingSenderId: "209611385121",
+  appId: "1:209611385121:web:cdad69e737a04eac017660"
+};
+// ⬆⬆
+
+const DEFAULT_CATS = ["優先go","等等go"];
+const UNCAT = "未分類";
+const TICKETS = [
+  {k:"cube",   label:"CUBE卡友優先購・雙日",   short:"CUBE卡友",   price:4600},
+  {k:"tree",   label:"國泰大樹套票",           short:"大樹套票",   price:4600},
+  {k:"dg2",    label:"大港人優先購・雙日",     short:"大港人雙日", price:4600},
+  {k:"dgShip", label:"大港人優先購・船鳴套票", short:"大港人船鳴", price:5200},
+  {k:"gen2",   label:"一般預售・雙日",         short:"一般雙日",   price:4800},
+  {k:"genShip",label:"一般預售・船鳴套票",     short:"一般船鳴",   price:5400},
+  {k:"dis",    label:"身心障礙票",             short:"身障票",     price:null},
+];
+const tkOf = k => TICKETS.find(t=>t.k===k);
+const SALES = [
+  {t:"2026-12-07T12:00:00+08:00", name:"大港人Ｘ國泰CUBE卡友優先購", info:"雙日 $4,600"},
+  {t:"2026-12-07T15:00:00+08:00", name:"國泰世華大樹套票", info:"$4,600・需199小樹點換序號"},
+  {t:"2026-12-08T12:00:00+08:00", name:"大港人優先購", info:"雙日 $4,600／船鳴 $5,200"},
+  {t:"2026-12-09T12:00:00+08:00", name:"一般預售＋身心障礙票", info:"雙日 $4,800／船鳴 $5,400"},
+];
+
+let db = null, col = null, canWrite = true;
+let people = [];
+let filter = "all", catFilter = "", query = "";
+let addCat = "優先go", buySel = new Set(), buyTk = "", buyStatus = "ordered", editId = null;
+let me = "", myTk = "";
+try { me = localStorage.getItem("dg_me") || ""; myTk = localStorage.getItem("dg_tk") || ""; } catch(e){}
+let askedMe = false;
+// 還沒買的人：每個人看到的順序都不一樣（優先go 仍排前面），避免大家同時搶同一個名字
+// 順序在這次打開期間固定，不會因為別人更新就亂跳；按「洗牌」才重排
+let rndKey = new Map();
+const rnd = id => { if (!rndKey.has(id)) rndKey.set(id, Math.random()); return rndKey.get(id); };
+const busy = new Set();      // 正在寫入的 id，避免連點
+const armed = new Map();     // 「還沒買」需要按兩次
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => "$" + Number(n).toLocaleString();
+const catOf = p => DEFAULT_CATS.includes(p.cat) ? p.cat : UNCAT;
+const hasPrice = p => p.price!==null && p.price!==undefined && p.price!=="";
+// 舊資料相容：沒有 st 但有 buyer → 視為已訂購
+const status = p => !p.buyer ? "none" : (p.st==="done" ? "done" : "ordered");
+const CLEAR = {buyer:"", price:null, payTo:"", paid:false, ticket:"", st:"none"};
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
+
+async function copyText(text, el){
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch(e) {
+    try { const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); ok=document.execCommand("copy"); ta.remove(); } catch(e2){}
+  }
+  if (ok) { toast("已複製：" + (text.includes("\n") ? text.split("\n").length+" 個名字" : text));
+    if (el){ el.classList.add("done"); el.textContent="✓"; setTimeout(()=>{el.classList.remove("done"); el.textContent="複製";},1200); } }
+  else toast("無法自動複製，請長按名字手動複製");
+}
+
+function cats(){
+  const seen = new Set(DEFAULT_CATS);
+  people.forEach(p => seen.add(p.cat || UNCAT));
+  return [...seen].sort((a,b)=>{
+    if (a===UNCAT) return 1; if (b===UNCAT) return -1;
+    const ia = DEFAULT_CATS.indexOf(a), ib = DEFAULT_CATS.indexOf(b);
+    if (ia>-1 && ib>-1) return ia-ib; if (ia>-1) return -1; if (ib>-1) return 1;
+    return a.localeCompare(b,"zh-Hant");
+  });
+}
+
+function renderMe(){
+  $("meTxt").textContent = me || "點這裡選你的名字";
+  $("meBtn").classList.toggle("unset", !me);
+  const t = tkOf(myTk);
+  $("tkTxt").textContent = t ? t.short + (t.price ? "　"+money(t.price) : "") : "選票種";
+}
+
+function matches(p){
+  const q = query.trim().toLowerCase();
+  return (filter==="all" || status(p)===filter) &&
+    (!catFilter || (catFilter==="mine" ? (me && p.buyer===me) : catOf(p)===catFilter)) &&
+    (!q || [p.name,p.buyer,p.payTo,p.note].some(v => String(v||"").toLowerCase().includes(q)));
+}
+
+function render(){
+  const c = {all:people.length, none:0, ordered:0, done:0};
+  people.forEach(p => c[status(p)]++);
+  $("nAll").textContent=c.all; $("nNone").textContent=c.none; $("nOrdered").textContent=c.ordered; $("nDone").textContent=c.done;
+  document.querySelectorAll(".stat").forEach(s=>s.classList.toggle("sel", s.dataset.f===filter));
+
+  const allCats = cats();
+  // 單選：優先go／等等go／我付錢ㄉ／未分類，再點一次取消
+  $("chips").innerHTML = [[DEFAULT_CATS[0],DEFAULT_CATS[0]],[DEFAULT_CATS[1],DEFAULT_CATS[1]],["mine","我付錢ㄉ"],[UNCAT,UNCAT]]
+    .map(([k,l]) => `<button class="chip ${k==="mine"?"mine":""} ${k===catFilter?"sel":""}" data-cat="${esc(k)}">${esc(l)}</button>`).join("");
+
+  const names = [...new Set(people.map(p=>p.name).concat(people.map(p=>p.buyer).filter(Boolean)))];
+  $("nameList").innerHTML = names.map(n=>`<option value="${esc(n)}">`).join("");
+  $("catList").innerHTML = allCats.map(n=>`<option value="${esc(n)}">`).join("");
+
+  if (!people.length) { $("groups").innerHTML = `<div class="empty">還沒有任何名字<br>按下方「＋ 新增名字」開始</div>`; return; }
+  const shown = people.filter(matches);
+  if (!shown.length) { $("groups").innerHTML = `<div class="empty">沒有符合的名字</div>`; return; }
+
+  const catIdx = c => allCats.indexOf(c||UNCAT);
+  const byTime = (a,b) => (a.createdAt||0)-(b.createdAt||0);
+  const order = {ordered:0, done:1};
+  let html = "";
+  const noneRows = shown.filter(p=>!p.buyer).sort((a,b)=> catIdx(a.cat)-catIdx(b.cat) || rnd(a.id)-rnd(b.id));
+  if (noneRows.length) {
+    html += `<div class="group"><div class="ghead"><h2 style="color:var(--orange)">🔥 還沒買<em>${noneRows.length}</em></h2>
+      <span><button class="btn sm ghost" data-shuffle="1">🔀 洗牌</button> <button class="btn sm ghost" data-copylist="none">複製這組</button></span></div><div class="list">`;
+    noneRows.forEach(p => html += rowHtml(p, true));
+    html += `</div></div>`;
+  }
+  allCats.forEach(cat => {
+    const rows = shown.filter(p => p.buyer && (p.cat||UNCAT)===cat).sort((a,b)=> order[status(a)]-order[status(b)] || byTime(a,b));
+    if (!rows.length) return;
+    html += `<div class="group"><div class="ghead"><h2>${esc(cat)}・已買<em>${rows.length}</em></h2>
+      <button class="btn sm ghost" data-copylist="${esc(cat)}">複製這組</button></div><div class="list">`;
+    rows.forEach(p => html += rowHtml(p, false));
+    html += `</div></div>`;
+  });
+  $("groups").innerHTML = html;
+}
+
+function rowHtml(p, showCat){
+  const st = status(p);
+  let meta = "";
+  if (!DEFAULT_CATS.includes(p.cat)) meta += `<span class="note" style="color:var(--orange)">未分類</span> <button class="catset" data-cat-set="優先go" data-id="${p.id}">優先go</button><button class="catset" data-cat-set="等等go" data-id="${p.id}">等等go</button>`;
+  else if (showCat) meta += `<span class="note">${esc(p.cat)}</span>`;
+  if (p.buyer) {
+    const tk = tkOf(p.ticket);
+    meta += (meta?" ":"") + (tk ? `<span class="tk">${esc(tk.short)}</span> ` : "")
+         + `<b>${esc(p.buyer)}</b> 買的` + (hasPrice(p) ? ` · <b>${money(p.price)}</b>` : "")
+         + (p.payTo && p.payTo!==p.buyer ? ` · 錢給 <b>${esc(p.payTo)}</b>` : "");
+  }
+  if (p.note) meta += (meta?" ":"") + `<span class="note">${esc(p.note)}</span>`;
+  const isArmed = armed.has(p.id);
+  return `<div class="row ${st} ${me && p.buyer===me ? "mine":""}">
+    <div class="top">
+      <div class="who">
+        <div class="nm"><strong>${esc(p.name)}</strong><button class="copy" data-copy="${esc(p.name)}">複製</button></div>
+        ${meta ? `<div class="meta">${meta}</div>` : ""}
+      </div>
+      <button class="edit" data-edit="${p.id}">編輯</button>
+    </div>
+    <div class="stbar">
+      <button class="sb s-none ${st==="none"?"on":""} ${isArmed?"arm":""}" data-set="none" data-id="${p.id}">${isArmed?"確定清除":"還沒買"}</button>
+      <button class="sb s-ordered ${st==="ordered"?"on":""}" data-set="ordered" data-id="${p.id}">已訂未結帳</button>
+      <button class="sb s-done ${st==="done"?"on":""}" data-set="done" data-id="${p.id}">✓ 結帳完成</button>
+      <button class="money ${p.paid?"on":""}" data-money="${p.id}" ${p.buyer?"":"hidden"} title="錢有沒有付給買的人">${p.paid?"💰 已付":"💰 未付"}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- 快速狀態切換 ---------- */
+async function setStatus(id, target){
+  if (!needWrite()) return;
+  const p = people.find(x=>x.id===id); if (!p) return;
+  const cur = status(p);
+  if (cur === target) return;
+
+  if (target === "none") {
+    if (!armed.has(id)) {                         // 第一次按：變紅色要求確認
+      armed.set(id, setTimeout(()=>{ armed.delete(id); render(); }, 3000));
+      render(); return;
+    }
+    clearTimeout(armed.get(id)); armed.delete(id);
+    return write(id, {...CLEAR}, `${p.name} 已改回還沒買`);
+  }
+
+  if (cur === "none") {                           // 還沒買 → 已訂購／結帳完成：自動填我的名字
+    if (!me) { toast("先選你是誰"); openMe(); return; }
+    const t = tkOf(myTk);
+    // 送出前再確認一次，避免兩人同時按
+    try {
+      const snap = await col.doc(id).get();
+      if (snap.exists && snap.data().buyer && snap.data().buyer !== me) { toast(`${p.name} 已經被 ${snap.data().buyer} 訂走了`); return; }
+    } catch(e){}
+    return write(id, {buyer:me, payTo:me, st:target, ticket:myTk||"", price: t && t.price ? t.price : null, paid:false},
+      `${p.name}：${target==="done"?"結帳完成 ✓":"已訂購"}` + (t ? "" : "（記得補票種）"));
+  }
+  if (target==="done") fireworks();
+  return write(id, {st:target}, `${p.name}：${target==="done"?"結帳完成 ✓":"改回已訂購・未結帳"}`);
+}
+
+async function write(id, data, msg){
+  if (busy.has(id)) return;
+  busy.add(id);
+  try { await col.doc(id).update({...data, updatedAt:Date.now()}); if (msg) toast(msg); }
+  catch(e){ handleErr(e); }
+  finally { busy.delete(id); }
+}
+
+/* ---------- events ---------- */
+$("stats").addEventListener("click", e => { const s=e.target.closest(".stat"); if(!s) return; filter = (filter===s.dataset.f && s.dataset.f!=="all") ? "all" : s.dataset.f; render(); });
+$("chips").addEventListener("click", e => {
+  const c=e.target.closest("[data-cat]"); if(!c) return;
+  if (c.dataset.cat==="mine" && !me) { toast("先選你是誰"); return openMe(); }
+  catFilter = catFilter===c.dataset.cat ? "" : c.dataset.cat; render(); });
+$("q").addEventListener("input", e => { query=e.target.value; render(); });
+$("copyNone").addEventListener("click", () => {
+  const list = people.filter(p=>!p.buyer && (!catFilter || catFilter==="mine" || catOf(p)===catFilter)).map(p=>p.name);
+  if (!list.length) return toast("沒有還沒買的名字 🎉");
+  copyText(list.join("\n"));
+});
+$("groups").addEventListener("click", e => {
+  const cs = e.target.closest("[data-cat-set]");
+  if (cs) { if (!needWrite()) return; const p=people.find(x=>x.id===cs.dataset.id); return write(cs.dataset.id, {cat:cs.dataset.catSet}, `${p?p.name:""} → ${cs.dataset.catSet}`); }
+  if (e.target.closest("[data-shuffle]")) { rndKey = new Map(); render(); return toast("已重新洗牌 🔀"); }
+  const s = e.target.closest("[data-set]"); if (s) return setStatus(s.dataset.id, s.dataset.set);
+  const m = e.target.closest("[data-money]");
+  if (m) { if (!needWrite()) return; const p=people.find(x=>x.id===m.dataset.money); if(!p) return;
+    return write(p.id, {paid:!p.paid}, `${p.name}：${p.paid?"錢改為未付":"錢已付 💰"}`); }
+  const c = e.target.closest("[data-copy]"); if (c) return copyText(c.dataset.copy, c);
+  const g = e.target.closest("[data-copylist]");
+  if (g) { const k=g.dataset.copylist;
+    const list = people.filter(matches).filter(p => k==="none" ? !p.buyer : (p.buyer && (p.cat||UNCAT)===k)).map(p=>p.name);
+    return copyText(list.join("\n")); }
+  const ed = e.target.closest("[data-edit]"); if (ed) return openEdit(ed.dataset.edit);
+});
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeAll));
+document.querySelectorAll(".ov").forEach(o => o.addEventListener("click", e => { if (e.target===o && o.id!=="ovPass") closeAll(); }));
+function closeAll(){ document.querySelectorAll(".ov:not(#ovPass)").forEach(o=>o.classList.remove("show")); }
+function needWrite(){ if (!db) { toast("資料庫還沒連上"); return false; } if (!canWrite) { toast("你目前只有檢視權限"); return false; } return true; }
+function handleErr(e){
+  console.error(e);
+  if (e && (e.code==="invalid_argument" || e.code==="permission-denied")) { canWrite=false; showBanner("你目前只有「檢視」權限，無法修改。請請擁有者把你設為可編輯。"); }
+  else if (e && e.code==="quota_exceeded") toast("資料已滿，請刪掉一些名字");
+  else toast("儲存失敗，請再試一次");
+}
+function showBanner(t){ const b=$("banner"); b.textContent=t; b.style.display=t?"block":"none"; }
+
+/* 我是誰 */
+function openMe(){
+  const names = [...new Set(people.map(p=>p.name))];
+  $("mePick").innerHTML = names.map(n=>`<button data-n="${esc(n)}" class="${n===me?"sel":""}">${esc(n)}</button>`).join("") || `<div class="hint">名單還是空的，直接輸入吧</div>`;
+  $("meInput").value = names.includes(me) ? "" : me;
+  $("ovMe").classList.add("show");
+}
+$("meBtn").addEventListener("click", openMe);
+$("mePick").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return;
+  $("mePick").querySelectorAll("button").forEach(x=>x.classList.toggle("sel", x===b)); $("meInput").value=""; });
+$("meSave").addEventListener("click", () => {
+  const typed = $("meInput").value.trim(); const sel = $("mePick").querySelector("button.sel");
+  const v = typed || (sel ? sel.dataset.n : "");
+  if (!v) return toast("請選或輸入你的名字");
+  me = v; try { localStorage.setItem("dg_me", me); } catch(e){}
+  closeAll(); renderMe(); render(); toast("嗨 " + me + "！");
+});
+
+/* 票種 */
+function renderTkPick(){
+  $("tkPick").innerHTML = TICKETS.map(t=>`<button data-k="${t.k}" class="${t.k===myTk?"sel":""}">${esc(t.label)}<small>${t.price?money(t.price):"票價自填"}</small></button>`).join("");
+}
+$("tkBtn").addEventListener("click", () => { renderTkPick(); $("ovTk").classList.add("show"); });
+$("tkPick").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return;
+  myTk = b.dataset.k; try { localStorage.setItem("dg_tk", myTk); } catch(e){}
+  renderMe(); closeAll(); toast("票種：" + tkOf(myTk).short); });
+
+/* 開賣時程 */
+function renderSale(){
+  const now = Date.now();
+  const nextI = SALES.findIndex(s => new Date(s.t).getTime() + 30*60000 > now);
+  $("sched").innerHTML = SALES.map((s,i)=>{
+    const d = new Date(s.t);
+    const when = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:00`;
+    const cls = i===nextI ? "next" : (i<nextI || nextI===-1 ? "past" : "");
+    return `<div class="si ${cls}"><span>${when}　${esc(s.name)}</span><span>${esc(s.info)}</span></div>`;
+  }).join("");
+  if (nextI===-1) { $("saleNext").textContent="所有場次都開賣過了"; $("saleCd").textContent=""; return; }
+  const s = SALES[nextI], diff = new Date(s.t).getTime() - now;
+  $("saleNext").textContent = s.name;
+  const cd = $("saleCd");
+  if (diff <= 0) { cd.textContent = "開賣中！衝！"; cd.classList.add("now"); return; }
+  cd.classList.remove("now");
+  const sec = Math.floor(diff/1000), D=Math.floor(sec/86400), H=Math.floor(sec%86400/3600), M=Math.floor(sec%3600/60), S=sec%60;
+  cd.textContent = D>0 ? `${D}天 ${H}時 ${M}分` : `${String(H).padStart(2,"0")}:${String(M).padStart(2,"0")}:${String(S).padStart(2,"0")}`;
+}
+$("sale").addEventListener("click", ()=> $("sale").classList.toggle("open"));
+renderSale(); setInterval(renderSale, 1000);
+
+/* 新增名字 */
+$("openAdd").addEventListener("click", () => {
+  $("addNames").value=""; $("addNote").value=""; $("doAdd").dataset.ok=""; $("doAdd").textContent="新增";
+  if (DEFAULT_CATS.includes(catFilter)) addCat = catFilter;
+  renderAddSeg(); $("ovAdd").classList.add("show"); setTimeout(()=>$("addNames").focus(),50);
+});
+function renderAddSeg(){
+  $("addCatSeg").innerHTML = DEFAULT_CATS.map(c=>`<button data-c="${esc(c)}" class="${c===addCat?"sel":""}">${esc(c)}</button>`).join("");
+}
+$("addCatSeg").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return; addCat=b.dataset.c; renderAddSeg(); });
+$("doAdd").addEventListener("click", async () => {
+  if (!needWrite()) return;
+  const names = $("addNames").value.split(/[\n,，、]+/).map(s=>s.trim()).filter(Boolean);
+  if (!names.length) return toast("請輸入名字");
+  const cat = addCat;
+  const note = $("addNote").value.trim();
+  const existing = new Set(people.map(p=>p.name));
+  const dup = names.filter(n=>existing.has(n));
+  const btn=$("doAdd");
+  if (dup.length && btn.dataset.ok !== dup.join(",")) {
+    btn.dataset.ok = dup.join(","); btn.textContent = "仍要新增";
+    return toast(`${dup.join("、")} 已在名單，要再多一張票請再按一次`);
+  }
+  btn.dataset.ok=""; btn.textContent="新增"; btn.disabled=true;
+  try {
+    let t = Date.now();
+    for (const n of names) await col.add({name:n, cat, note, ...CLEAR, createdAt:t++, updatedAt:Date.now()});
+    closeAll(); toast(`新增 ${names.length} 筆`);
+  } catch(e){ handleErr(e); } finally { btn.disabled=false; }
+});
+
+/* 一次登記多人 */
+function renderBuyTk(){
+  $("buyTk").innerHTML = TICKETS.map(t=>`<button data-k="${t.k}" class="${t.k===buyTk?"sel":""}">${esc(t.label)}<small>${t.price?money(t.price):"票價自填"}</small></button>`).join("");
+}
+$("buyTk").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return;
+  buyTk = buyTk===b.dataset.k ? "" : b.dataset.k; const t=tkOf(buyTk);
+  if (t && t.price) $("buyPrice").value = t.price; renderBuyTk(); });
+$("buySt").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return;
+  buyStatus = b.dataset.s; $("buySt").querySelectorAll("button").forEach(x=>x.classList.toggle("sel", x===b)); });
+$("openBuy").addEventListener("click", () => {
+  buySel = new Set(); buyTk = myTk; buyStatus = "ordered";
+  const t = tkOf(buyTk); $("buyPrice").value = t && t.price ? t.price : "";
+  $("buyPayTo").value=""; $("buyBy").value = me;
+  $("buySt").querySelectorAll("button").forEach(x=>x.classList.toggle("sel", x.dataset.s==="ordered"));
+  renderBuyTk(); renderPick(); $("ovBuy").classList.add("show");
+});
+function renderPick(){
+  const avail = people.filter(p=>!p.buyer);
+  if (!avail.length) { $("buyPick").innerHTML = `<div class="hint">所有人都已經有票了 🎉</div>`; return; }
+  let h="";
+  cats().forEach(c => {
+    const rows = avail.filter(p=>(p.cat||UNCAT)===c); if(!rows.length) return;
+    h += `<div class="cat">${esc(c)}</div>` + rows.map(p=>`<button data-id="${p.id}" class="${buySel.has(p.id)?"sel":""}">${esc(p.name)}${p.note?`<small>（${esc(p.note)}）</small>`:""}</button>`).join("");
+  });
+  $("buyPick").innerHTML = h;
+}
+$("buyPick").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return;
+  buySel.has(b.dataset.id) ? buySel.delete(b.dataset.id) : buySel.add(b.dataset.id); b.classList.toggle("sel"); });
+$("doBuy").addEventListener("click", async () => {
+  if (!needWrite()) return;
+  const by = $("buyBy").value.trim();
+  if (!buySel.size) return toast("請選擇至少一個名字");
+  if (!by) return toast("請填誰買的");
+  const pr = $("buyPrice").value.trim();
+  const data = {buyer:by, price: pr==="" ? null : Number(pr), payTo: $("buyPayTo").value.trim() || by, paid:false, ticket:buyTk, st:buyStatus};
+  const btn=$("doBuy"); btn.disabled=true;
+  const ok=[], taken=[];
+  try {
+    for (const id of buySel) {
+      const ref = col.doc(id), snap = await ref.get();
+      if (!snap.exists) continue;
+      const d = snap.data();
+      if (d.buyer) { taken.push(`${d.name}（${d.buyer}）`); continue; }
+      await ref.update({...data, updatedAt:Date.now()}); ok.push(d.name);
+    }
+    closeAll();
+    if (ok.length) fireworks();
+    toast(`🎉 已登記 ${ok.length} 人` + (taken.length ? `；${taken.join("、")} 已被訂走` : ""));
+  } catch(e){ handleErr(e); } finally { btn.disabled=false; }
+});
+
+/* 編輯 */
+$("edTk").innerHTML = `<option value="">（未指定）</option>` + TICKETS.map(t=>`<option value="${t.k}">${esc(t.label)}${t.price?"　"+money(t.price):""}</option>`).join("");
+$("edTk").addEventListener("change", ()=>{ const t=tkOf($("edTk").value); if (t && t.price) $("edPrice").value=t.price; });
+function openEdit(id){
+  const p = people.find(x=>x.id===id); if(!p) return;
+  editId = id;
+  $("edTitle").textContent = p.name; $("edName").value=p.name; $("edCat").value=DEFAULT_CATS.includes(p.cat)?p.cat:UNCAT; $("edNote").value=p.note||"";
+  $("edBy").value=p.buyer||""; $("edPrice").value=(p.price??""); $("edPayTo").value=p.payTo||"";
+  $("edTk").value=p.ticket||""; $("edSt").value = status(p)==="done" ? "done" : "ordered"; $("edPaid").checked=!!p.paid;
+  $("edDel").dataset.armed=""; $("edDel").textContent="刪除此人";
+  $("ovEdit").classList.add("show");
+}
+$("edClear").addEventListener("click", () => { $("edTk").value=""; $("edBy").value=""; $("edPrice").value=""; $("edPayTo").value=""; $("edPaid").checked=false; });
+$("edSave").addEventListener("click", async () => {
+  if (!needWrite()) return;
+  const name=$("edName").value.trim(); if(!name) return toast("名字不能空白");
+  const by=$("edBy").value.trim(), pr=$("edPrice").value.trim();
+  const data = { name, cat:$("edCat").value||UNCAT, note:$("edNote").value.trim(),
+    ...(by ? {buyer:by, price: pr!=="" ? Number(pr) : null, payTo: $("edPayTo").value.trim()||by,
+              paid:$("edPaid").checked, ticket:$("edTk").value, st:$("edSt").value} : CLEAR) };
+  try { await col.doc(editId).update({...data, updatedAt:Date.now()}); closeAll(); toast("已儲存"); } catch(e){ handleErr(e); }
+});
+$("edDel").addEventListener("click", async () => {
+  const b=$("edDel");
+  if (!b.dataset.armed) { b.dataset.armed="1"; b.textContent="再按一次確認刪除"; return; }
+  if (!needWrite()) return;
+  try { await col.doc(editId).delete(); closeAll(); toast("已刪除"); } catch(e){ handleErr(e); }
+});
+
+/* ---------- 煙火 ---------- */
+function fireworks(){
+  const cv = $("fw"), ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const W = cv.width = innerWidth*dpr, H = cv.height = innerHeight*dpr;
+  const colors = ["#ffcc33","#ff5d5d","#3ddc84","#5aa9ff","#ff9f43","#ff7ad9","#ffffff"];
+  let parts = [], rockets = [], t0 = performance.now();
+  const launch = () => rockets.push({x:W*(.15+Math.random()*.7), y:H, vy:-(H*.014+Math.random()*H*.006), ty:H*(.15+Math.random()*.3),
+    c:colors[Math.random()*colors.length|0]});
+  for (let i=0;i<6;i++) setTimeout(launch, i*260);
+  const burst = r => { const n=70; for(let i=0;i<n;i++){ const a=Math.PI*2*i/n, sp=(2+Math.random()*4)*dpr;
+    parts.push({x:r.x,y:r.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,c:Math.random()<.3?"#fff":r.c}); } };
+  (function frame(now){
+    ctx.globalCompositeOperation="destination-out"; ctx.fillStyle="rgba(0,0,0,.25)"; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation="lighter";
+    rockets = rockets.filter(r => { r.y += r.vy; ctx.fillStyle=r.c; ctx.beginPath(); ctx.arc(r.x,r.y,3*dpr,0,7); ctx.fill();
+      if (r.y <= r.ty) { burst(r); return false; } return true; });
+    parts = parts.filter(p => { p.x+=p.vx; p.y+=p.vy; p.vy+=.06*dpr; p.vx*=.985; p.vy*=.985; p.life-=.012;
+      ctx.globalAlpha=Math.max(p.life,0); ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,2.2*dpr,0,7); ctx.fill(); return p.life>0; });
+    ctx.globalAlpha=1;
+    if (now - t0 < 4500 && (rockets.length || parts.length || now - t0 < 1800)) requestAnimationFrame(frame);
+    else ctx.clearRect(0,0,W,H);
+  })(t0);
+}
+
+/* ---------- db（Firebase Firestore）---------- */
+function setLive(state, txt){ $("dot").className = "dot " + (state||""); $("liveTxt").textContent = txt; }
+const fdb = getFirestore(initializeApp(FIREBASE_CONFIG));
+
+async function roomOf(pass){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("majiu:" + pass.trim()));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,32);
+}
+// 密語對不對：房間裡要有 meta/check 這筆
+async function tryPass(pass){
+  if (!pass) return false;
+  const room = await roomOf(pass);
+  try { const s = await getDoc(doc(fdb, "rooms", room, "meta", "check")); return s.exists() ? room : false; }
+  catch(e){ console.error(e); return false; }
+}
+function makeCol(room){
+  const base = collection(fdb, "rooms", room, "people");
+  return {
+    doc: id => { const r = doc(base, id); return {
+      get: async () => { const s = await getDoc(r); return {exists:s.exists(), data:()=>s.data()}; },
+      update: d => updateDoc(r, d), delete: () => deleteDoc(r) }; },
+    add: d => addDoc(base, d),
+    onSnapshot: (next, err) => onSnapshot(base, s => next({metadata:{fromCache:s.metadata.fromCache},
+      docs:s.docs.map(d=>({id:d.id, data:()=>d.data()}))}), err),
+  };
+}
+function start(room){
+  db = true; col = makeCol(room);
+  const timer = setTimeout(()=>{ setLive("err","連線緩慢"); showBanner("名單暫時連不上，畫面可能不是最新的，稍等一下會自動更新。"); }, 10000);
+  col.onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { clearTimeout(timer); if (canWrite) showBanner(""); }
+    people = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    setLive("on", "即時同步中");
+    render();
+    if ($("ovBuy").classList.contains("show")) renderPick();
+    if (!me && !askedMe && people.length && !document.querySelector(".ov.show")) { askedMe = true; openMe(); }
+  }, err => {
+    clearTimeout(timer); console.error(err);
+    setLive("err","連線中斷"); showBanner("即時同步中斷了，請重新整理頁面。");
+  });
+}
+renderMe(); render(); setLive("", "請輸入密語");
+(async () => {
+  let saved = ""; try { saved = localStorage.getItem("dg_pass") || ""; } catch(e){}
+  const room = await tryPass(saved);
+  if (room) return start(room);
+  $("ovPass").classList.add("show"); setTimeout(()=>$("passIn").focus(), 50);
+  const go = async () => {
+    const pass = $("passIn").value.trim(); $("passErr").textContent = "";
+    $("passGo").disabled = true;
+    const r = await tryPass(pass);
+    $("passGo").disabled = false;
+    if (!r) { $("passErr").textContent = "密語不對喔"; return; }
+    try { localStorage.setItem("dg_pass", pass); } catch(e){}
+    $("ovPass").classList.remove("show"); start(r);
+  };
+  $("passGo").addEventListener("click", go);
+  $("passIn").addEventListener("keydown", e => { if (e.key==="Enter") go(); });
+})();
+</script>
+</body>
+</html>
